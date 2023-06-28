@@ -77,6 +77,11 @@ where continent is not null
 GROUP BY date
 order by 1
 
+
+ select sum(new_cases)as total_cases ,sum(new_deaths) as total_deaths ,(sum(new_deaths)/ sum(new_cases)) as death_percentage
+from  portfolio_1..covid_deaths
+where continent is not null
+
 --looking at total population vs vaccinations
 
 select dea.continent,dea.location,dea.date,dea.population,vac.new_vaccinations,sum(cast(vac.new_vaccinations as float))
