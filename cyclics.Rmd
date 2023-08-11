@@ -1,0 +1,263 @@
+---
+title: "cyclics"
+author: "ahmed_el3sfory"
+date: "2023-07-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#How Does a Bike-Share Navigate Speedy Success?
+ 
+##About the task
+"your team wants to understand how casual riders and annual members use Cyclistic bikes differently. From these insights,
+your team will design a new marketing strategy to convert casual riders into annual members"
+
+##loading the packages
+```{r library}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+```
+##import the csv files
+"we will use read_csv to import csv files into our R script "
+```{r upload csv files}
+jun2023 <- read_csv("202306-divvy-tripdata.csv")
+may2023 <- read_csv("202305-divvy-tripdata.csv")
+apr2023 <- read_csv("202304-divvy-tripdata.csv")
+mar2023 <- read_csv("202303-divvy-tripdata.csv")
+feb2023 <- read_csv("202302-divvy-tripdata.csv")
+jan2023 <- read_csv("202301-divvy-tripdata.csv")
+dec2022 <- read_csv("202212-divvy-tripdata.csv")
+nov2022 <- read_csv("202211-divvy-tripdata.csv")
+oct2022 <- read_csv("202210-divvy-tripdata.csv")
+sep2022 <- read_csv("202209-divvy-tripdata.csv")
+aug2022 <- read_csv("202208-divvy-tripdata.csv")
+jul2022 <- read_csv("202207-divvy-tripdata.csv")
+
+```
+"We would also need to check if there are any discrepancies with formatting
+as all the twelve tables should have the same number and types of columns"
+```{r structure months}
+str(jun2023)
+str(may2023)
+str(apr2023)
+str(mar2023)
+str(feb2023)
+str(jan2023)
+str(dec2022)
+str(nov2022)
+str(oct2022)
+str(sep2022)
+str(aug2022)
+str(jul2022)
+```
+"after check every thing is ok "
+
+"Now merge all the tables into one dataset "
+```{r my new data}
+ cyclics <- bind_rows(jun2023,may2023 ,apr2023 ,mar2023 ,feb2023 ,jan2023 ,dec2022 ,
+nov2022 ,oct2022 ,sep2022 ,aug2022 ,jul2022 )
+```
+" to ensure that the new datast has been created "
+```{r structure}
+str(cyclics)
+```
+##cleaning the dataset "cyclics"
+## first ensure that the variables names is clean and consistent
+```{r clean_names}
+cyclics <- clean_names(cyclics)
+
+```
+##We should also remove any empty columns and rows in our data.frame, we can do so by using remove_empty().
+```{r remove_empty}
+cyclics<-remove_empty(cyclics,which=c("rows","cols"),quiet=F)
+
+```
+## Add some important columns
+"we need to add some columns ( day_of_week ,start_hour , month ,trip_duration )"
+
+"first add the column day_of_week by using wday() function "
+```{r day_of_week}
+cyclics$day_of_week<-wday(cyclics$started_at ,label=T,abb=T)
+
+```
+"second add the column starting_hour by using format(as.posixct)"
+```{r starting_hour}
+cyclics$starting_hour <- format(as.POSIXct(cyclics$started_at),'%H')
+
+```
+"Now let's create month column by using format(as.POSIXct)"
+```{r month}
+cyclics$month <- format(as.Date(cyclics$started_at),format='%Y-%m')
+
+```
+" Next let's get the trip_length column "
+```{r trip_length}
+cyclics$trip_length <- difftime(cyclics$ended_at, cyclics$started_at, units ='min')
+
+```
+"Now we will remove any row that has atrip_length equals or less than zero"
+```{r filter}
+cyclics <- cyclics%>%
+filter(trip_length>0)
+```
+build our new csv file 
+```{r cyclics.csv}
+write.csv(cyclics, file ='cyclics.csv')
+
+```
+#share&analyze
+
+" we have some analysis questions to answer 
+1-How do casual and members use their bikes differently throughout the week
+2-Peak hours of bike usage between casual and annual members
+3-Bike usage throughout the year
+4-The average trip duration between casual and annual members
+5-Most popular stations among casual and annual members"
+
+
+Now we will use ggplot2 library which is apart of tidyverse library 
+to create a chart about the number of rides per day for each type od rider
+```{r vis_day}
+options(scipen = 999)
+ggplot(cyclics)+
+aes(x=day_of_week,fill=member_casual)+
+  geom_bar(position='dodge')+
+labs(title='Number Of Rides Per Member Type', x='Day Of Week',y='Number Of Rides')+
+theme(axis.text.x=element_text(angle=45))
+```
+Now let's save the image
+```{r day.png}
+ggsave("Number Of Rides Per day.png")
+```
+to create a chart about the number of rides per month for each type of rider
+```{r vis_month}
+ggplot(cyclics)+
+  aes(x=month,fill=member_casual)+
+  geom_bar(position='dodge')+
+  labs(title='Number Of Rides Per Member Type', x='The Month',y='Number Of Rides')+
+  theme(axis.text.x=element_text(angle=45))
+```
+Now let's save the image
+```{r month.png}
+ggsave("Number Of Rides Per month.png")
+
+```
+create arelations between the hour of day and number of rides
+```{r hours}
+ggplot(cyclics)+
+  aes(x=starting_hour,fill=member_casual)+
+  geom_bar()+
+  facet_wrap(~day_of_week)+
+  labs(title='Number Of Rides Per Member Type', x='the hour',y='Number Of Rides')+
+theme(axis.text.x=element_text(angle=45,size=5))
+```
+
+
+
+# Casual Vs Member
+
+Now  we have aquick look about the data  but let's make it more professional ,
+so what about getting the percent of member and casual per trips 
+
+```{r trip count}
+cyclics %>% 
+  group_by(member_casual) %>% 
+  summarise(count = n(), Percentage = n()/nrow(cyclics)*100)
+```
+It clears that the number of users as members is 61.17 % and the casuals is 38.83 %
+so now we know that members is more than casuals as users.
+
+```{r trip length}
+cyclics %>% 
+  group_by(member_casual) %>% 
+  summarise(sum(trip_length)) 
+```
+```{r length}
+ggplot(cyclics, aes(x=member_casual,y=trip_length, fill=member_casual)) +
+  geom_col() +
+  labs(x="User Type", y="Total Trip Length", title = "Total Trip Length by User Type: Casual vs Member")
+
+```
+
+ It's so important to know whose spend more time casuals or members 
+ Now we discovered that casuals using bike for so much time than members.
+ 
+ ## Trips_Length is our new scale
+
+--create a chart about trips length per month for each type of user
+ 
+
+```{r length month}
+cyclics %>% 
+  group_by(member_casual,month) %>% 
+  summarise(total_trip_length=sum(trip_length)/60,.groups = "drop") %>% 
+ggplot()+
+aes(x=month,y=total_trip_length,fill=member_casual)+
+  geom_col(position ='dodge')+
+  labs(title ='Trip Length Vs Month Per User Type',x='The Month',y='Total Trip Length (hr)')+
+  theme(axis.text.x=element_text(angle=45))
+```
+Let's take a look at the weekdays
+
+```{r length week}
+cyclics %>% 
+  group_by(member_casual,day_of_week) %>% 
+  summarise(total_trip_length=sum(trip_length)/60,.groups = 'drop') %>% 
+ggplot()+
+  aes(x=day_of_week,y=total_trip_length,fill=member_casual)+
+  geom_col(position = 'dodge')+
+ labs(title ='Trip Length Vs Day Of Week Per User Type',x='The Day Of Week',y='Total Trips Length During The Year (hr)')+
+  theme(axis.text.x=element_text(angle=45))
+
+```
+
+# Type Of Bike 
+
+what's the most preferred type of bike ?
+--as number of rides--
+```{r bike type }
+ggplot(cyclics)+
+  aes(x=rideable_type,fill=member_casual)+
+  geom_bar(position='dodge')+
+labs(title = 'Preferred Bike For Users',x='Type Of Bike' ,y='Number Of Rides For Users' )
+
+
+```
+
+what's the most preferred type of bike ?
+--as length of trips--
+
+```{r bike type length}
+cyclics %>% 
+  group_by(rideable_type,member_casual) %>% 
+summarise(time_of_trips=sum(trip_length)/60,.groups ='drop' ) %>% 
+  ggplot()+
+  aes(x=rideable_type,y=time_of_trips,fill=member_casual)+
+  geom_col(position = 'dodge')+
+  labs(title=' Bike Type Vs Trips Length',x='Bike Type',y='Total Time Of Trips (hr)')
+```
+
+
+
+So we estimate that classic_bikes have trips length more than others
+
+
+#Conclusions
+
+* Members have trips more than Casuals.
+* casuals spent time more than members in their trips.
+* People prefer bikes in summer months from may to September.
+* Casuals prefer bikes in weekend days  (Saturday and Sunday).
+* Member usage almost fixed during weekdays.
+* People prefer electric bikes.
+
+#Recommendations
+
+* Focusing in making advertisements and offers of membership at Saturday and Sunday.
+* Making a true  offers in months from May to September.
+* Give attention to get more electric bikes.
+
+
+
